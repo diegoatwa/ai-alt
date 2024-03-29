@@ -1,6 +1,6 @@
 {
   "name": "ai-alt",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "An npm package that reads the image src and uses ai to generate alt text and insert the alt attribute for accessibility",
   "main": "src/index.js",
   "type": "module",
