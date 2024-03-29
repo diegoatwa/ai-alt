@@ -1,0 +1,20 @@
+{
+  "name": "ai-alt",
+  "version": "0.0.1",
+  "description": "ai-alt is an advanced Node.js package designed to provide developers with a powerful set of tools to integrate AI-driven functionalities into their applications effortlessly. This package focuses on offering a broad spectrum of AI capabilities, from natural language processing (NLP) and image recognition to predictive analytics and automated decision-making. Built with flexibility and performance in mind, ai-alt leverages cutting-edge machine learning models and algorithms to enable sophisticated AI features that can adapt to a wide range of scenarios and data types. Whether you're building web applications, mobile apps, or complex software solutions, ai-alt aims to reduce the complexity of AI integration, allowing developers to enhance their projects with intelligent features quickly. Suitable for both novice and experienced developers, this package provides a comprehensive API documentation, example projects, and a supportive community to help you get started with AI development.",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "ai",
+    "alt",
+    "nodejs",
+    "a11y",
+    "wcag",
+    "accessibility"
+  ],
+  "author": "Diego Azevedo",
+  "license": "MIT"
+}
