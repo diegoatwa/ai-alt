@@ -1,4 +1,5 @@
 # ai-alt ✨
+## (IN ALPHA DEVELOPMENT)
 
 Insert image alt automatically using computer vision and artificial intelligence.
 
