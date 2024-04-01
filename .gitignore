@@ -1,3 +1,6 @@
 /node_modules
 /static
 *temp.md
+
+# ai-alt (prevent sensitive data leak) 
+.env

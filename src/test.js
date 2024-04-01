@@ -8,6 +8,7 @@ import fs from "fs";
 import Jimp from "jimp";
 import { fileTypeFromBuffer } from "file-type";
 import { Buffer } from "buffer";
+import "dotenv/config";
 
 async function getImageBase64(filePath) {
   let mimeType;
@@ -18,7 +19,6 @@ async function getImageBase64(filePath) {
     const imageArrayBuffer = await imageResponse.arrayBuffer();
     const fileType = await fileTypeFromBuffer(Buffer.from(imageArrayBuffer));
     mimeType = fileType.mime;
-    console.log(mimeType);
     imageBase64 = Buffer.from(imageArrayBuffer).toString("base64");
   } else {
     const buffer = fs.readFileSync(filePath);
@@ -37,16 +37,13 @@ export async function run(filePath) {
   let { height } = image.bitmap;
 
   if (height > 100) {
-    console.time("Redimensionando a imagem");
     image = image.resize(Jimp.AUTO, 100);
     let resizedImageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
     imageBase64 = resizedImageBuffer.toString("base64");
-    console.timeEnd("Redimensionando a imagem");
   }
 
   const MODEL_NAME = "gemini-1.0-pro-vision-latest";
-  const API_KEY = "AIzaSyCd8wCVewTr-6L82AcAfnJTVx35dKWdFJY"; // RELAX, THIS IS A DISABLED KEY, but don't do that, not even in a draft, this key almost went to a public repository while it was still activated...
-  const genAI = new GoogleGenerativeAI(API_KEY);
+  const genAI = new GoogleGenerativeAI(process.env.AI_ALT_PROVIDER_APIKEY);
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
   const generationConfig = {
@@ -87,8 +84,6 @@ export async function run(filePath) {
     },
   ];
 
-  console.log(parts);
-
   const result = await model.generateContent({
     contents: [{ role: "user", parts }],
     generationConfig,
@@ -118,7 +113,7 @@ export async function run(filePath) {
 
   const localFile = "static/folder.png";
 
-  // await run(localFile);
-  // await run(urlFile);
-  await run(urlFile2);
+  run(localFile);
+  run(urlFile);
+  run(urlFile2);
 }
