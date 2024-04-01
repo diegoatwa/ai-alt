@@ -5,22 +5,47 @@ import {
 } from "@google/generative-ai";
 import fetch from "node-fetch";
 import fs from "fs";
+import Jimp from "jimp";
+import { fileTypeFromBuffer } from "file-type";
+import { Buffer } from "buffer";
 
-export async function run(filePath) {
-  let imageBase64, mimeType;
+async function getImageBase64(filePath) {
+  let mimeType;
+  let imageBase64;
 
   if (filePath.startsWith("http")) {
     const imageResponse = await fetch(filePath);
-    mimeType = imageResponse.headers.get("content-type");
     const imageArrayBuffer = await imageResponse.arrayBuffer();
+    const fileType = await fileTypeFromBuffer(Buffer.from(imageArrayBuffer));
+    mimeType = fileType.mime;
+    console.log(mimeType);
     imageBase64 = Buffer.from(imageArrayBuffer).toString("base64");
   } else {
-    mimeType = `image/${filePath.split(".").pop()}`;
-    imageBase64 = Buffer.from(fs.readFileSync(filePath)).toString("base64");
+    const buffer = fs.readFileSync(filePath);
+    const fileType = await fileTypeFromBuffer(buffer);
+    mimeType = fileType.mime;
+    imageBase64 = Buffer.from(buffer).toString("base64");
+  }
+
+  return { mimeType, imageBase64 };
+}
+
+export async function run(filePath) {
+  let { mimeType, imageBase64 } = await getImageBase64(filePath);
+
+  let image = await Jimp.read(Buffer.from(imageBase64, "base64"));
+  let { height } = image.bitmap;
+
+  if (height > 100) {
+    console.time("Redimensionando a imagem");
+    image = image.resize(Jimp.AUTO, 100);
+    let resizedImageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+    imageBase64 = resizedImageBuffer.toString("base64");
+    console.timeEnd("Redimensionando a imagem");
   }
 
   const MODEL_NAME = "gemini-1.0-pro-vision-latest";
-  const API_KEY = "AIzaSyCd8wCVewTr-6L82AcAfnJTVx35dKWdFJY";
+  const API_KEY = "AIzaSyCd8wCVewTr-6L82AcAfnJTVx35dKWdFJY"; // RELAX, THIS IS A DISABLED KEY, but don't do that, not even in a draft, this key almost went to a public repository while it was still activated...
   const genAI = new GoogleGenerativeAI(API_KEY);
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
@@ -28,7 +53,7 @@ export async function run(filePath) {
     temperature: 0.4,
     topK: 32,
     topP: 1,
-    maxOutputTokens: 4096,
+    maxOutputTokens: 100,
   };
 
   const safetySettings = [
@@ -52,7 +77,7 @@ export async function run(filePath) {
 
   const parts = [
     {
-      text: "Gere o texto alternativo para o attr alt da tag img da image a seguir:\n",
+      text: "Generate an image description for the HTML img tag's alt attribute. The alt should be in English.\n",
     },
     {
       inlineData: {
@@ -61,6 +86,8 @@ export async function run(filePath) {
       },
     },
   ];
+
+  console.log(parts);
 
   const result = await model.generateContent({
     contents: [{ role: "user", parts }],
@@ -71,7 +98,7 @@ export async function run(filePath) {
   const response = result.response;
   const responseText = response.text();
 
-  const inputTokens = await model.countTokens(parts);
+  const inputTokens = await model.countTokens(JSON.stringify(parts));
   const outputTokens = await model.countTokens(responseText);
 
   console.table({
@@ -87,11 +114,11 @@ export async function run(filePath) {
     "https://user-images.githubusercontent.com/26748277/167853312-df10387d-7826-43a6-8b08-51984562f7b8.png";
 
   const urlFile2 =
-    "https://user-images.githubusercontent.com/26748277/167853363-1551aadc-3c53-4d72-83ad-c647ea65a92f.png";
+    "https://cdn.pixabay.com/photo/2017/02/20/18/03/cat-2083492_1280.jpg";
 
   const localFile = "static/folder.png";
 
-  await run(urlFile);
+  // await run(localFile);
+  // await run(urlFile);
   await run(urlFile2);
-  await run(localFile);
 }
