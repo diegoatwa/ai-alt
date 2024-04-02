@@ -9,40 +9,120 @@ import Jimp from "jimp";
 import { fileTypeFromBuffer } from "file-type";
 import { Buffer } from "buffer";
 import "dotenv/config";
+import { AIs } from "./AIs.js";
 
-async function getImageBase64(filePath) {
-  let mimeType;
+async function getImageBase64FromUrl(url) {
+  if (!url || typeof url !== "string") {
+    throw new Error("Invalid URL!");
+  }
+
+  let response;
+  try {
+    response = await fetch(url);
+  } catch (err) {
+    throw new Error(`Network error on download image: ${err.message}`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`HTTP error on download image! status: ${response.status}`);
+  }
+
+  const arrayBuffer = await response.arrayBuffer();
+  if (!arrayBuffer) {
+    throw new Error("No data received from image download!");
+  }
+
+  const fileType = await fileTypeFromBuffer(Buffer.from(arrayBuffer));
+  if (!fileType) {
+    throw new Error("Could not determine file type from image!");
+  }
+
+  const mimeType = fileType.mime;
+  if (!mimeType.startsWith("image")) {
+    throw new Error("File is not an image!");
+  }
+
   let imageBase64;
+  try {
+    imageBase64 = Buffer.from(arrayBuffer).toString("base64");
+  } catch (err) {
+    throw new Error(`Error converting image to base64: ${err.message}`);
+  }
 
-  if (filePath.startsWith("http")) {
-    const imageResponse = await fetch(filePath);
-    const imageArrayBuffer = await imageResponse.arrayBuffer();
-    const fileType = await fileTypeFromBuffer(Buffer.from(imageArrayBuffer));
-    mimeType = fileType.mime;
-    imageBase64 = Buffer.from(imageArrayBuffer).toString("base64");
-  } else {
-    const buffer = fs.readFileSync(filePath);
-    const fileType = await fileTypeFromBuffer(buffer);
-    mimeType = fileType.mime;
-    imageBase64 = Buffer.from(buffer).toString("base64");
+  if (!imageBase64) {
+    throw new Error("Could not convert image to base64!");
   }
 
   return { mimeType, imageBase64 };
 }
 
-export async function run(filePath) {
+async function getImageBase64FromFile(filePath) {
+  if (!filePath || typeof filePath !== "string") {
+    throw new Error("Invalid file path!");
+  }
+
+  if (!fs.existsSync(filePath)) {
+    console.log("File does not exist!");
+    throw new Error("File does not exist!");
+  }
+  const buffer = fs.readFileSync(filePath);
+  if (!buffer) {
+    throw new Error("Could not read file!");
+  }
+
+  const fileType = await fileTypeFromBuffer(buffer);
+  if (!fileType) {
+    throw new Error("Could not determine file type from image!");
+  }
+
+  const mimeType = fileType.mime;
+  if (!mimeType.startsWith("image")) {
+    throw new Error("File is not an image!");
+  }
+
+  let imageBase64;
+  try {
+    imageBase64 = Buffer.from(buffer).toString("base64");
+  } catch (e) {
+    throw new Error("Could not convert image to base64!");
+  }
+
+  if (!imageBase64) {
+    throw new Error("Could not convert image to base64!");
+  }
+
+  return { mimeType, imageBase64 };
+}
+
+async function getImageBase64(filePath) {
+  if (filePath.startsWith("http")) {
+    return getImageBase64FromUrl(filePath);
+  } else {
+    return getImageBase64FromFile(filePath);
+  }
+}
+export async function run(filePath, debug = false) {
   let { mimeType, imageBase64 } = await getImageBase64(filePath);
 
   let image = await Jimp.read(Buffer.from(imageBase64, "base64"));
   let { height } = image.bitmap;
 
-  if (height > 100) {
-    image = image.resize(Jimp.AUTO, 100);
+  if (height > 150) {
+    image = image.resize(Jimp.AUTO, 150);
     let resizedImageBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
     imageBase64 = resizedImageBuffer.toString("base64");
   }
 
-  const MODEL_NAME = "gemini-1.0-pro-vision-latest";
+  const MODEL_NAME = AIs.filter(
+    (ai) => ai.model === process.env.AI_ALT_MODEL
+  )[0].modelInternalName;
+
+  if (!MODEL_NAME) {
+    throw new Error(
+      "Invalid model name!\n\nPlease, run `npx ai-alt --init` to initialize the project."
+    );
+  }
+
   const genAI = new GoogleGenerativeAI(process.env.AI_ALT_PROVIDER_APIKEY);
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
@@ -74,7 +154,7 @@ export async function run(filePath) {
 
   const parts = [
     {
-      text: "Generate an image description for the HTML img tag's alt attribute. The alt should be in English.\n",
+      text: process.env.AI_ALT_LANGUAGE_CUSTOM_PROMPT,
     },
     {
       inlineData: {
@@ -96,24 +176,28 @@ export async function run(filePath) {
   const inputTokens = await model.countTokens(JSON.stringify(parts));
   const outputTokens = await model.countTokens(responseText);
 
-  console.table({
-    inputTokens: inputTokens.totalTokens,
-    outputTokens: outputTokens.totalTokens,
-  });
+  if (debug) {
+    console.table({
+      inputTokens: inputTokens.totalTokens,
+      outputTokens: outputTokens.totalTokens,
+    });
 
-  console.log(responseText + "\n");
+    console.log(responseText + "\n");
+  }
+
+  return responseText;
 }
 
-{
-  const urlFile =
-    "https://user-images.githubusercontent.com/26748277/167853312-df10387d-7826-43a6-8b08-51984562f7b8.png";
+// {
+//   const urlFile =
+//     "https://user-images.githubusercontent.com/26748277/167853312-df10387d-7826-43a6-8b08-51984562f7b8.png";
 
-  const urlFile2 =
-    "https://cdn.pixabay.com/photo/2017/02/20/18/03/cat-2083492_1280.jpg";
+//   const urlFile2 =
+//     "https://cdn.pixabay.com/photo/2017/02/20/18/03/cat-2083492_1280.jpg";
 
-  const localFile = "static/folder.png";
+//   const localFile = "static/folder.png";
 
-  run(localFile);
-  run(urlFile);
-  run(urlFile2);
-}
+//   run(localFile);
+//   run(urlFile);
+//   run(urlFile2);
+// }

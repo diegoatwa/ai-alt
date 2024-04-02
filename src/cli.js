@@ -3,7 +3,12 @@
 import inquirer from "inquirer";
 import fs from "node:fs";
 import { Languages } from "./languages.js";
-import { IAs } from "./IAs.js";
+import { AIs } from "./AIs.js";
+import { run } from "./test.js";
+
+function initIsOk() {
+  return true;
+}
 
 async function init() {
   console.log();
@@ -33,7 +38,7 @@ async function init() {
       type: "list",
       name: "model",
       message: "Model:",
-      choices: IAs.map((ia) => ia.model),
+      choices: AIs.map((ia) => ia.model),
       default: defaultAnswers.model,
     },
     {
@@ -103,6 +108,12 @@ async function init() {
         ".env",
         `AI_ALT_LANGUAGE_CUSTOM_PROMPT="${answers.customPrompt}"\n`
       );
+    } else {
+      const language = Languages.find((lang) => lang.name === answers.language);
+      fs.appendFileSync(
+        ".env",
+        `AI_ALT_LANGUAGE_CUSTOM_PROMPT="${language.defaultPrompt}"\n`
+      );
     }
 
     if (answers.limits) {
@@ -119,9 +130,43 @@ async function init() {
   }
 }
 
+async function getAltByImgSrcOrPath() {
+  const urlOrFilePath = process.argv[3];
+
+  if (!urlOrFilePath) {
+    console.log("Please provide a URL.");
+    console.log(
+      "example: ai-alt --url https://cdn.pixabay.com/photo/2017/02/20/18/03/cat-2083492_1280.jpg"
+    );
+    return;
+  }
+
+  const hasInit = initIsOk();
+  if (!hasInit) init();
+
+  const alt = await run(urlOrFilePath);
+  console.log(alt);
+}
+
 const commands = {
   "-i": { description: "Configure the AI model", action: init },
   "--init": { description: "Configure the AI model", action: init },
+  "-u": {
+    description: "url - get alt from url image",
+    action: getAltByImgSrcOrPath,
+  },
+  "--url": {
+    description: "url - get alt from url image",
+    action: getAltByImgSrcOrPath,
+  },
+  "-f": {
+    description: "file - get alt from filePath image",
+    action: getAltByImgSrcOrPath,
+  },
+  "--file": {
+    description: "file - get alt from filePath image",
+    action: getAltByImgSrcOrPath,
+  },
 };
 
 function help() {

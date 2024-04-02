@@ -1,7 +1,8 @@
-export const IAs = [
+export const AIs = [
   {
     model: "Gemini 1.0 Pro Vision",
-    providers: ["Google AI Studio" /** , "Vertex AI" */],
+    modelInternalName: "gemini-1.0-pro-vision-latest",
+    providers: ["Google AI Studio" /**, "Vertex AI" */],
   },
   //   { model: "GPT-3.5", providers: ["OpenAI"] },
   //   {
