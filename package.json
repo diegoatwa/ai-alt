@@ -16,7 +16,7 @@
     "accessibility"
   ],
   "bin": {
-    "ai-alt": "src/cli.js"
+    "ai-alt": "src/cli/cli.js"
   },
   "repository": {
     "type": "git",
