@@ -9,7 +9,7 @@ import Jimp from "jimp";
 import { fileTypeFromBuffer } from "file-type";
 import { Buffer } from "buffer";
 import "dotenv/config";
-import { AIs } from "./AIs.js";
+import { AIs } from "./cli/utils.js";
 
 async function getImageBase64FromUrl(url) {
   if (!url || typeof url !== "string") {
