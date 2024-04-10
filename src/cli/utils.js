@@ -107,7 +107,7 @@ const environmentVariables = [
   {
     title: "AI_ALT_RESIZE_IMAGES_SIZE",
     description: "The size to resize images to.",
-    required: false,
+    required: true,
     value: 256,
   },
 ];
