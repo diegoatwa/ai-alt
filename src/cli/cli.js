@@ -1,13 +1,19 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
+import { init, getAltByImgSrcOrPath, check } from "./utils.js";
+
 const program = new Command();
-import { init, getAltByImgSrcOrPath } from "./utils.js";
 
 program
   .name("ai-alt")
   .description("A CLI tool for getting alt text from images")
-  .version("1.0.0");
+  .version("0.0.8", "-v, --version");
+
+program
+  .command("check")
+  .description("Check if the environment variables are set")
+  .action(check);
 
 program
   .command("init") //
@@ -22,7 +28,7 @@ program
 
 program
   .command("file")
-  .description("Get alt from file path image")
+  .description("Get alt from the path of a local image file")
   .argument("<path>", "Path to the image file")
   .action((path) => getAltByImgSrcOrPath(path));
 

@@ -4,16 +4,60 @@ import { Languages } from "../languages.js";
 import { run } from "../test.js";
 import "dotenv/config";
 
+function logSuccess(message) {
+  console.log(`\x1b[32m✅ ${message}\x1b[0m`);
+}
+
+function logError(message) {
+  console.error(`\x1b[31m❌ ${message}\x1b[0m`);
+}
+
+export async function check() {
+  try {
+    if (!allRequiredEnvsAreSet()) {
+      logError("Environment variables are not set.");
+
+      const answers = await inquirer.prompt([
+        {
+          type: "confirm",
+          name: "configure_init",
+          message: "Configure now?",
+          default: true,
+        },
+      ]);
+
+      if (answers.configure_init) {
+        await init();
+        logSuccess("Environment variables are successfully set.");
+      }
+    } else {
+      logSuccess("Environment variables are set.");
+    }
+  } catch (error) {
+    logError(`An error occurred: ${error.message}`);
+    throw error;
+  }
+}
+
+let imageResizeOptions = [
+  "64px",
+  "128px",
+  "256px",
+  "512px",
+  "1024px",
+  "disabled (caution: may consume many, many tokens)",
+];
+
 export const AIs = [
   {
-    model: "Gemini 1.0 Pro Vision",
+    model: "Gemini 1.0 Pro Vision (by Google)",
     modelInternalName: "gemini-1.0-pro-vision-latest",
     providers: ["Google AI Studio" /**, "Vertex AI" */],
   },
-  //   { model: "GPT-3.5", providers: ["OpenAI"] },
+  //   { model: "GPT-3.5 (by OpenAI)", providers: ["OpenAI"] },
   //   {
   //     model: "LLaVA (Large Language and Vision Assistant)",
-  //     providers: ["ollama (localhost)", "ollama (remote)"],
+  //     providers: ["ollama (by localhost)", "ollama (remote)"],
   //   },
 ];
 
@@ -60,20 +104,35 @@ const environmentVariables = [
     required: false,
     value: null,
   },
+  {
+    title: "AI_ALT_RESIZE_IMAGES_SIZE",
+    description: "The size to resize images to.",
+    required: false,
+    value: 256,
+  },
 ];
 
-function check_environmentVariables() {
-  environmentVariables.forEach((env) => {
-    if (!process.env[env.title]) {
+export function allRequiredEnvsAreSet() {
+  for (const i in environmentVariables) {
+    const { required, title } = environmentVariables[i];
+    if (required && !process.env[title]) {
       return false;
     }
-  });
+  }
 
   return true;
 }
 
+export async function getAltByImgSrcOrPath(path) {
+  const hasInit = allRequiredEnvsAreSet();
+  if (!hasInit && !(await init())) return;
+
+  const alt = await run(path);
+  console.log(alt);
+}
+
 export async function init() {
-  if (check_environmentVariables()) {
+  if (allRequiredEnvsAreSet()) {
     const answers = await inquirer.prompt([
       {
         type: "confirm",
@@ -115,19 +174,25 @@ export async function init() {
       },
     },
     {
+      type: "list",
+      name: "AI_ALT_RESIZE_IMAGES_SIZE",
+      message: "The longest side of the image must be at most:",
+      choices: imageResizeOptions,
+    },
+    {
       type: "confirm",
       name: "limits",
       message: "Define token limit per session?",
     },
     {
       type: "number",
-      name: "AI_ALT_MAX_OUTPUT_TOKENS",
-      message: "MAX input tokens per session:",
+      name: "AI_ALT_MAX_INPUT_TOKENS",
+      message: "MAX input  tokens per session:",
       when: (answers) => answers.limits,
     },
     {
       type: "number",
-      name: "AI_ALT_MAX_INPUT_TOKENS",
+      name: "AI_ALT_MAX_OUTPUT_TOKENS",
       message: "MAX output tokens per session:",
       when: (answers) => answers.limits,
     },
@@ -180,12 +245,4 @@ export async function init() {
       `\n\n# ai-alt (prevent sensitive data leak) \n.env\n`
     );
   }
-}
-
-export async function getAltByImgSrcOrPath(path) {
-  const hasInit = initIsOk();
-  if (!hasInit) init();
-
-  const alt = await run(path);
-  process.stdout.write(alt);
 }
